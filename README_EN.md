@@ -7,6 +7,14 @@
 - **Base Character**: Free download from [Quaternius - Ultimate Modular Characters](https://quaternius.com/packs/ultimatemodularcharacters.html)
 - **Animations**: From [Mixamo](https://www.mixamo.com/)
 
+## Description
+
+Mixamo2GLBAnimationMerger is an automated pipeline for converting and merging character animations for web applications. It converts FBX files (typically exported from Mixamo) into a single, web-optimized GLB file containing all animations.
+
+**Problem:** Character animations are often available as separate FBX files (one file per animation). However, for web applications with Three.js, you need a single GLB file that contains both the character mesh and all animations.
+
+**Solution:** This pipeline automatically converts FBX files to web-friendly GLB format, merges all animations together, validates the structure for Three.js compatibility, and automatically creates documentation about all included animations.
+
 ## Installation
 
 ```bash
