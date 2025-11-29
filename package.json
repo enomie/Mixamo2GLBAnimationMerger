@@ -2,6 +2,7 @@
   "name": "mixamo2glb-animation-merger",
   "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
   "description": "Mixamo2GLBAnimationMerger - Automated pipeline for converting Mixamo character animations from FBX to web-optimized GLB format",
   "scripts": {
     "debug": "node scripts/debug_fbx.js",
