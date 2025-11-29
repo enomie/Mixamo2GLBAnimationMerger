@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playable Character Demo</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #87CEEB;
+            font-family: sans-serif;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="info">Loading...</div>
+    <div id="controls">
+        Controls:<br>
+        W / A / S / D - Move<br>
+        SHIFT - Run<br>
+        SPACE - Jump
+    </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // --- Configuration ---
+        const MODEL_PATH = './merged/character_all_animations.glb';
+        const WALK_SPEED = 2.0;
+        const RUN_SPEED = 5.0;
+        const ROTATION_SPEED = 5.0;
+
+        // --- Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa0a0a0);
+        scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 2, -3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // --- Lighting ---
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff);
+        dirLight.position.set(3, 10, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // --- Ground ---
+        const mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0x999999, depthWrite: false })
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+
+        const grid = new THREE.GridHelper(100, 40, 0x000000, 0x000000);
+        grid.material.opacity = 0.2;
+        grid.material.transparent = true;
+        scene.add(grid);
+
+        // --- Input Handling ---
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            shift: false, space: false
+        };
+
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = true;
+            if (e.key === 'Shift') keys.shift = true;
+            if (e.key === ' ') keys.space = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (keys.hasOwnProperty(key)) keys[key] = false;
+            if (e.key === 'Shift') keys.shift = false;
+            if (e.key === ' ') keys.space = false;
+        });
+
+        // --- Character Controller ---
+        let character, mixer;
+        let actions = {};
+        let activeAction, previousAction;
+        let isJumping = false;
+
+        // Animation mapping - adjust these names based on your actual animation names!
+        // Based on previous logs: '36-walk', '30-run', '18-idle-berathing' (assuming idle exists or use first one)
+        // I'll try to find best matches dynamically or hardcode known ones
+        const animNames = {
+            idle: 'idle', // Will search for 'idle'
+            walk: 'walk',
+            run: 'run',
+            jump: 'jump'
+        };
+
+        const loader = new GLTFLoader();
+        loader.load(MODEL_PATH, (gltf) => {
+            character = gltf.scene;
+            scene.add(character);
+
+            console.log("=".repeat(60));
+            console.log("✅ CHARACTER LOADED SUCCESSFULLY");
+            console.log("=".repeat(60));
+            
+            console.log(`\n📦 MODEL INFO:`);
+            console.log(`  - File: ${MODEL_PATH}`);
+            console.log(`  - Total Animations: ${gltf.animations.length}`);
+            
+            let meshCount = 0;
+            let boneCount = 0;
+            const importantNodes = ['Root', 'Hips', 'Torso', 'Chest', 'Abdomen', 'Head', 'Index4L', 'Index4R'];
+            const foundNodes = {};
+            
+            character.traverse(object => {
+                if (object.isMesh) {
+                    meshCount++;
+                    object.castShadow = true;
+                }
+                if (object.isBone) boneCount++;
+                if (importantNodes.includes(object.name)) {
+                    foundNodes[object.name] = true;
+                }
+            });
+            
+            console.log(`  - Meshes: ${meshCount}`);
+            console.log(`  - Bones: ${boneCount}`);
+            console.log(`  - Important Nodes:`);
+            importantNodes.forEach(nodeName => {
+                console.log(`    ${foundNodes[nodeName] ? '✅' : '❌'} ${nodeName}`);
+            });
+            
+            console.log(`\n🎬 AVAILABLE ANIMATIONS (${gltf.animations.length}):`);
+            gltf.animations.forEach((clip, i) => {
+                console.log(`  ${i + 1}. "${clip.name}" - ${clip.duration.toFixed(3)}s (${clip.tracks.length} tracks)`);
+            });
+
+            mixer = new THREE.AnimationMixer(character);
+
+            const clips = gltf.animations;
+            const findClip = (term) => clips.find(c => c.name.toLowerCase().includes(term));
+
+            const idleClip = findClip('idle') || clips[0];
+            const walkClip = findClip('36-walk') || findClip('walk');
+            const runClip = findClip('30-run') || findClip('run');
+            const jumpClip = findClip('jump');
+
+            console.log(`\n🎯 ANIMATION MAPPING:`);
+            if (idleClip) {
+                actions.idle = mixer.clipAction(idleClip);
+                console.log(`  ✅ Idle: "${idleClip.name}"`);
+            } else {
+                console.log(`  ❌ Idle: NOT FOUND`);
+            }
+            
+            if (walkClip) {
+                actions.walk = mixer.clipAction(walkClip);
+                console.log(`  ✅ Walk: "${walkClip.name}"`);
+            } else {
+                console.log(`  ❌ Walk: NOT FOUND`);
+            }
+            
+            if (runClip) {
+                actions.run = mixer.clipAction(runClip);
+                console.log(`  ✅ Run: "${runClip.name}"`);
+            } else {
+                console.log(`  ❌ Run: NOT FOUND`);
+            }
+            
+            if (jumpClip) {
+                actions.jump = mixer.clipAction(jumpClip);
+                console.log(`  ✅ Jump: "${jumpClip.name}"`);
+            } else {
+                console.log(`  ⚠️  Jump: NOT FOUND (optional)`);
+            }
+
+            console.log(`\n🎮 CONTROLS:`);
+            console.log(`  W/A/S/D - Move`);
+            console.log(`  SHIFT - Run`);
+            console.log(`  SPACE - Jump`);
+            
+            console.log(`\n📊 RUNTIME INFO:`);
+            console.log(`  - Active Animation: Will be logged during gameplay`);
+            console.log(`  - Input Status: Will be logged during gameplay`);
+            
+            console.log("=".repeat(60));
+
+            activeAction = actions.idle;
+            if (activeAction) activeAction.play();
+
+            document.getElementById('info').innerText = 'Character Loaded. Ready!';
+
+            animate();
+        }, undefined, (e) => {
+            console.error(e);
+            document.getElementById('info').innerText = 'Error loading model: ' + e.message;
+        });
+
+        let lastActionName = '';
+        let lastInputState = '';
+        
+        function fadeToAction(name, duration) {
+            previousAction = activeAction;
+            activeAction = actions[name];
+
+            if (previousAction !== activeAction && activeAction) {
+                previousAction.fadeOut(duration);
+                activeAction.reset().fadeIn(duration).play();
+                
+                if (lastActionName !== name) {
+                    console.log(`🎬 Animation: ${previousAction?.getClip().name || 'none'} → ${activeAction.getClip().name}`);
+                    lastActionName = name;
+                }
+            }
+        }
+
+        const clock = new THREE.Clock();
+
+        function updateCharacter(delta) {
+            if (!character) return;
+
+            const moveSpeed = keys.shift ? RUN_SPEED : WALK_SPEED;
+            const direction = new THREE.Vector3();
+
+            let moving = false;
+            const activeKeys = [];
+
+            if (keys.w) { direction.z += 1; moving = true; activeKeys.push('W'); }
+            if (keys.s) { direction.z -= 1; moving = true; activeKeys.push('S'); }
+            if (keys.a) { character.rotation.y += ROTATION_SPEED * delta; activeKeys.push('A'); }
+            if (keys.d) { character.rotation.y -= ROTATION_SPEED * delta; activeKeys.push('D'); }
+            if (keys.shift) activeKeys.push('SHIFT');
+            if (keys.space) activeKeys.push('SPACE');
+
+            const inputState = activeKeys.length > 0 ? activeKeys.join('+') : 'NONE';
+            if (inputState !== lastInputState && activeKeys.length > 0) {
+                console.log(`⌨️  Input: ${inputState}`);
+                lastInputState = inputState;
+            } else if (inputState === 'NONE' && lastInputState !== 'NONE') {
+                console.log(`⌨️  Input: NONE`);
+                lastInputState = inputState;
+            }
+
+            if (keys.space && actions.jump && !isJumping) {
+                fadeToAction('jump', 0.2);
+                isJumping = true;
+                setTimeout(() => { isJumping = false; }, 1000);
+            } else if (moving) {
+                if (keys.shift && actions.run) {
+                    fadeToAction('run', 0.2);
+                } else if (actions.walk) {
+                    fadeToAction('walk', 0.2);
+                }
+            } else {
+                if (actions.idle) fadeToAction('idle', 0.2);
+            }
+
+            if (moving) {
+                const forward = new THREE.Vector3(0, 0, 1);
+                forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
+                if (keys.s) forward.negate();
+
+                character.position.add(forward.multiplyScalar(moveSpeed * delta));
+            }
+        }
+
+        let frameCount = 0;
+        let lastFPSLog = 0;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            frameCount++;
+
+            if (mixer) mixer.update(delta);
+            updateCharacter(delta);
+
+            if (character) {
+                const relativeOffset = new THREE.Vector3(0, 2, -3);
+                const cameraOffset = relativeOffset.applyMatrix4(character.matrixWorld);
+                camera.position.lerp(cameraOffset, 0.1);
+                camera.lookAt(character.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
+            }
+
+            renderer.render(scene, camera);
+            
+            if (Date.now() - lastFPSLog > 5000) {
+                const fps = Math.round(frameCount / ((Date.now() - lastFPSLog) / 1000));
+                console.log(`📊 Performance: ~${fps} FPS | Position: (${character.position.x.toFixed(2)}, ${character.position.y.toFixed(2)}, ${character.position.z.toFixed(2)})`);
+                frameCount = 0;
+                lastFPSLog = Date.now();
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>

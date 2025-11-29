@@ -1,0 +1,9 @@
+node_modules/
+converted/
+merged/*.glb
+deleted/
+*.log
+.DS_Store
+.env
+.env.local
+

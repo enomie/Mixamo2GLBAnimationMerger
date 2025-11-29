@@ -1,0 +1,22 @@
+{
+  "name": "character-animation-pipeline",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FBX to glTF animation pipeline",
+  "scripts": {
+    "debug": "node scripts/debug_fbx.js",
+    "convert": "./scripts/convert_fbx_to_gltf.sh",
+    "merge": "node scripts/merge_animations.js",
+    "test": "node scripts/test_glb.js",
+    "build": "./scripts/convert_fbx_to_gltf.sh && node scripts/merge_animations.js"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^3.9.0",
+    "@gltf-transform/extensions": "^3.9.0",
+    "@gltf-transform/functions": "^3.9.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@cocos/fbx2gltf": "^1.0.8"
+  }
+}
