@@ -162,13 +162,59 @@ async function mergeAnimations() {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0];
     
-    let md = `# Animationen Dokumentation\n\n`;
-    md += `**System & Programmiersprachen:** Node.js, glTF, glTF-Transform\n\n`;
-    md += `**Erstellt:** ${dateStr}\n\n`;
-    md += `**Gesamt:** ${finalAnims.length} Animation(en)\n\n`;
-    md += `## Animationen Liste\n\n`;
-    md += `| Name | Dauer (s) | Channels | Samplers |\n`;
-    md += `|------|-----------|----------|----------|\n`;
+    const meshes = root.listMeshes();
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    let hasVertices = false;
+    
+    meshes.forEach(mesh => {
+        mesh.listPrimitives().forEach(primitive => {
+            const positionAccessor = primitive.getAttribute('POSITION');
+            if (positionAccessor) {
+                const array = positionAccessor.getArray();
+                const count = positionAccessor.getCount();
+                for (let i = 0; i < count * 3; i += 3) {
+                    const x = array[i];
+                    const y = array[i + 1];
+                    const z = array[i + 2];
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                    minZ = Math.min(minZ, z);
+                    maxZ = Math.max(maxZ, z);
+                    hasVertices = true;
+                }
+            }
+        });
+    });
+    
+    if (!hasVertices) {
+        minX = maxX = minY = maxY = minZ = maxZ = 0;
+    }
+    
+    const characterHeight = maxY - minY;
+    const characterWidth = maxX - minX;
+    const characterDepth = maxZ - minZ;
+    
+    let md = `# Character Animations Documentation\n\n`;
+    md += `**System & Programming Languages:** Node.js, glTF, glTF-Transform\n\n`;
+    md += `**Created:** ${dateStr}\n\n`;
+    md += `**Total Animations:** ${finalAnims.length}\n\n`;
+    
+    md += `## Character Specifications\n\n`;
+    md += `- **Height:** ${characterHeight.toFixed(3)} units\n`;
+    md += `- **Width:** ${characterWidth.toFixed(3)} units\n`;
+    md += `- **Depth:** ${characterDepth.toFixed(3)} units\n`;
+    md += `- **Bounding Box:** ${(maxX - minX).toFixed(3)} × ${(maxY - minY).toFixed(3)} × ${(maxZ - minZ).toFixed(3)} units\n`;
+    md += `- **Center:** (${((minX + maxX) / 2).toFixed(3)}, ${((minY + maxY) / 2).toFixed(3)}, ${((minZ + maxZ) / 2).toFixed(3)})\n`;
+    md += `- **Total Meshes:** ${meshes.length}\n`;
+    md += `- **Total Nodes:** ${root.listNodes().length}\n\n`;
+    
+    md += `## Animation List\n\n`;
+    md += `| Name | Duration (s) | Start (s) | End (s) | Channels | Samplers | Loop |\n`;
+    md += `|------|-------------|-----------|---------|----------|----------|------|\n`;
     
     const animDetails = [];
     finalAnims.forEach(anim => {
@@ -176,38 +222,77 @@ async function mergeAnimations() {
         const channels = anim.listChannels();
         const samplers = anim.listSamplers();
         
-        let maxDuration = 0;
+        let minTime = Infinity;
+        let maxTime = -Infinity;
+        
         samplers.forEach(sampler => {
             const input = sampler.getInput();
             if (input) {
                 const times = input.getArray();
                 if (times && times.length > 0) {
+                    const firstTime = times[0];
                     const lastTime = times[times.length - 1];
-                    if (lastTime > maxDuration) {
-                        maxDuration = lastTime;
-                    }
+                    minTime = Math.min(minTime, firstTime);
+                    maxTime = Math.max(maxTime, lastTime);
                 }
             }
         });
         
-        md += `| ${name} | ${maxDuration.toFixed(3)} | ${channels.length} | ${samplers.length} |\n`;
+        const duration = maxTime - minTime;
+        const isLoop = duration > 0 && (
+            name.includes('idle') || 
+            name.includes('walk') || 
+            name.includes('run') || 
+            name.includes('breathing') ||
+            name.includes('swimming') ||
+            name.includes('treading') ||
+            name.includes('sneaking')
+        ) && !name.includes('start') && !name.includes('stop');
+        
+        md += `| ${name} | ${duration.toFixed(3)} | ${minTime.toFixed(3)} | ${maxTime.toFixed(3)} | ${channels.length} | ${samplers.length} | ${isLoop ? 'Yes' : 'No'} |\n`;
         
         animDetails.push({
             name,
-            duration: maxDuration,
+            duration,
+            startTime: minTime,
+            endTime: maxTime,
             channels: channels.length,
-            samplers: samplers.length
+            samplers: samplers.length,
+            isLoop
         });
     });
     
-    md += `\n## Details\n\n`;
+    md += `\n## Animation Details\n\n`;
     
     animDetails.forEach(anim => {
         md += `### ${anim.name}\n\n`;
-        md += `- **Dauer:** ${anim.duration.toFixed(3)}s\n`;
+        md += `- **Duration:** ${anim.duration.toFixed(3)}s\n`;
+        md += `- **Start Time:** ${anim.startTime.toFixed(3)}s\n`;
+        md += `- **End Time:** ${anim.endTime.toFixed(3)}s\n`;
         md += `- **Channels:** ${anim.channels}\n`;
-        md += `- **Samplers:** ${anim.samplers}\n\n`;
+        md += `- **Samplers:** ${anim.samplers}\n`;
+        md += `- **Loop Recommended:** ${anim.isLoop ? 'Yes' : 'No'}\n\n`;
     });
+    
+    md += `## Usage Notes\n\n`;
+    md += `### Base Animation Cycle\n`;
+    md += `- **Idle:** Use "18-idle-berathing" (9.917s loop) as the default standing animation\n`;
+    md += `- **Idle Variations:** "19-idle-turn-left" and "20-idle-turn-right" for idle head movements\n\n`;
+    md += `### Movement Animations (Loop)\n`;
+    md += `- **Walk:** "36-walk" (1.000s loop) - standard walking\n`;
+    md += `- **Run:** "30-run" (0.625s loop) - standard running\n`;
+    md += `- **Walk Start/Stop:** "32-walk-start" and "33-walk-stop" for transitions\n`;
+    md += `- **Strafe:** "34-walk-strafe-left", "35-walk-strafe-right" for side movement\n`;
+    md += `- **Backwards:** "31-walk-backwards", "27-run-backwards" for reverse movement\n\n`;
+    md += `### Action Animations (One-Shot)\n`;
+    md += `- **Jump:** "26-jump-simple" (3.208s), "24-jump-long" (1.875s), "25-jump-over-box" (2.125s)\n`;
+    md += `- **Hit:** "14-hit-back" (3.667s), "16-hit-front" (2.250s), "15-hit-crouch" (2.333s)\n`;
+    md += `- **Car:** "02-car-driving-b" (46.667s), "03-car-driving" (5.000s)\n`;
+    md += `- **Water:** "37-water-swimming" (4.500s), "38-water-treading" (3.000s)\n\n`;
+    md += `### Animation Blending\n`;
+    md += `- Use fade transitions (0.2-0.3s) between different animation states\n`;
+    md += `- Loop animations should be set to repeat indefinitely\n`;
+    md += `- One-shot animations should be played once and return to idle\n\n`;
     
     fs.writeFileSync(docPath, md, 'utf8');
     console.log(`✅ Dokumentation erstellt: ${docPath}`);
