@@ -1,8 +1,8 @@
 {
-  "name": "character-animation-pipeline",
+  "name": "mixamo2glb-animation-merger",
   "version": "1.0.0",
   "type": "module",
-  "description": "FBX to glTF animation pipeline",
+  "description": "Mixamo2GLBAnimationMerger - Automated pipeline for converting Mixamo character animations from FBX to web-optimized GLB format",
   "scripts": {
     "debug": "node scripts/debug_fbx.js",
     "convert": "./scripts/convert_fbx_to_gltf.sh",

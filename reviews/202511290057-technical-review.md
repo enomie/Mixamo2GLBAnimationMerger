@@ -2,7 +2,7 @@
 
 **System & Programming Languages:** Node.js, JavaScript, TypeScript, Three.js, glTF, FBX, glTF-Transform, fbx2gltf CLI
 
-# Technical Review: Character Animation Pipeline
+# Technical Review: Mixamo2GLBAnimationMerger
 
 ## Credits
 
@@ -11,7 +11,7 @@
 
 ## Overview
 
-This pipeline automates the conversion and merging of character animations from FBX format to a single web-optimized GLB file. It is designed specifically for Mixamo character animations but works with any FBX files that follow the same structure.
+Mixamo2GLBAnimationMerger automates the conversion and merging of character animations from FBX format to a single web-optimized GLB file. It is designed specifically for Mixamo character animations but works with any FBX files that follow the same structure.
 
 ## Architecture
 

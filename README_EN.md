@@ -1,4 +1,4 @@
-# Character Animation Pipeline
+# Mixamo2GLBAnimationMerger
 
 **System & Programming Languages:** Node.js, glTF, FBX, fbx2gltf CLI, glTF-Transform
 
