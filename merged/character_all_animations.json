@@ -1,0 +1,428 @@
+{
+  "character": {
+    "height": 0.004546932876110077,
+    "width": 0.016754670068621635,
+    "depth": 0.018579765603135456,
+    "boundingBox": {
+      "width": 0.016754670068621635,
+      "height": 0.004546932876110077,
+      "depth": 0.018579765603135456
+    },
+    "center": {
+      "x": 0,
+      "y": -0.0005934180226176977,
+      "z": 0.009275907926166838
+    },
+    "totalMeshes": 4,
+    "totalNodes": 55
+  },
+  "animations": [
+    {
+      "name": "02-car-driving-b",
+      "duration": 46.66666793823242,
+      "startTime": 0,
+      "endTime": 46.66666793823242,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "03-car-driving",
+      "duration": 5,
+      "startTime": 0,
+      "endTime": 5,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "04-car-entering",
+      "duration": 5.458333492279053,
+      "startTime": 0,
+      "endTime": 5.458333492279053,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": 2.1557817738503218,
+      "recommendedSpeed": 0.39495237454796933
+    },
+    {
+      "name": "05-car-exiting",
+      "duration": 5.791666507720947,
+      "startTime": 0,
+      "endTime": 5.791666507720947,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": 0.1285136342048645,
+      "recommendedSpeed": 0.02218940507599001
+    },
+    {
+      "name": "06-car-honking",
+      "duration": 3.3333332538604736,
+      "startTime": 0,
+      "endTime": 3.3333332538604736,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "07-car-pushing",
+      "duration": 3.9583332538604736,
+      "startTime": 0,
+      "endTime": 3.9583332538604736,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 0.40725424885749817,
+      "recommendedSpeed": 0.10288528598755858
+    },
+    {
+      "name": "08-climbing",
+      "duration": 1.5416666269302368,
+      "startTime": 0,
+      "endTime": 1.5416666269302368,
+      "channels": 43,
+      "samplers": 43,
+      "loop": false,
+      "cycleDistance": 0.23744738101959229,
+      "recommendedSpeed": 0.15401992679338009
+    },
+    {
+      "name": "09-crouch-sneaking-left",
+      "duration": 1.25,
+      "startTime": 0,
+      "endTime": 1.25,
+      "channels": 41,
+      "samplers": 41,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "10-crouch-sneaking-right",
+      "duration": 1.0833333730697632,
+      "startTime": 0,
+      "endTime": 1.0833333730697632,
+      "channels": 41,
+      "samplers": 41,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "11-crouch-walk-backward",
+      "duration": 1.0833333730697632,
+      "startTime": 0,
+      "endTime": 1.0833333730697632,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 1.923976719379425,
+      "recommendedSpeed": 1.7759784450538911
+    },
+    {
+      "name": "12-crouch",
+      "duration": 0,
+      "startTime": 0,
+      "endTime": 0,
+      "channels": 48,
+      "samplers": 48,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "13-hit-back-slow",
+      "duration": 1.5833333730697632,
+      "startTime": 0,
+      "endTime": 1.5833333730697632,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "14-hit-back",
+      "duration": 3.6666667461395264,
+      "startTime": 0,
+      "endTime": 3.6666667461395264,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": 4.594351500272751,
+      "recommendedSpeed": 1.2530049274616908
+    },
+    {
+      "name": "15-hit-crouch",
+      "duration": 2.3333332538604736,
+      "startTime": 0,
+      "endTime": 2.3333332538604736,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": 0.5369689017534256,
+      "recommendedSpeed": 0.23012953716106202
+    },
+    {
+      "name": "16-hit-front",
+      "duration": 2.25,
+      "startTime": 0,
+      "endTime": 2.25,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 0.4391379542648792,
+      "recommendedSpeed": 0.1951724241177241
+    },
+    {
+      "name": "17-hit-getting",
+      "duration": 4.583333492279053,
+      "startTime": 0,
+      "endTime": 4.583333492279053,
+      "channels": 46,
+      "samplers": 46,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "18-idle-berathing",
+      "duration": 9.916666984558105,
+      "startTime": 0,
+      "endTime": 9.916666984558105,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "19-idle-turn-left",
+      "duration": 0.9166666865348816,
+      "startTime": 0,
+      "endTime": 0.9166666865348816,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "20-idle-turn-right",
+      "duration": 1,
+      "startTime": 0,
+      "endTime": 1,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 0.01665826514363289,
+      "recommendedSpeed": 0.01665826514363289
+    },
+    {
+      "name": "21-jump-backward",
+      "duration": 0.875,
+      "startTime": 0,
+      "endTime": 0.875,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": 1.968177393078804,
+      "recommendedSpeed": 2.249345592090062
+    },
+    {
+      "name": "22-jump-down",
+      "duration": 0.3333333432674408,
+      "startTime": 0,
+      "endTime": 0.3333333432674408,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 0.30763769894838333,
+      "recommendedSpeed": 0.9229130693401971
+    },
+    {
+      "name": "23-jump-hey-here-i-am",
+      "duration": 1.0416666269302368,
+      "startTime": 0,
+      "endTime": 1.0416666269302368,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "24-jump-long",
+      "duration": 1.875,
+      "startTime": 0,
+      "endTime": 1.875,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "25-jump-over-box",
+      "duration": 2.125,
+      "startTime": 0,
+      "endTime": 2.125,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 3.7674385011196136,
+      "recommendedSpeed": 1.7729122358209946
+    },
+    {
+      "name": "26-jump-simple",
+      "duration": 3.2083332538604736,
+      "startTime": 0,
+      "endTime": 3.2083332538604736,
+      "channels": 49,
+      "samplers": 49,
+      "loop": false,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "27-run-backwards",
+      "duration": 0.625,
+      "startTime": 0,
+      "endTime": 0.625,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 2.2267977632582188,
+      "recommendedSpeed": 3.56287642121315
+    },
+    {
+      "name": "28-run-strafe-left",
+      "duration": 0.6666666865348816,
+      "startTime": 0,
+      "endTime": 0.6666666865348816,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "29-run-strafe-right",
+      "duration": 0.6666666865348816,
+      "startTime": 0,
+      "endTime": 0.6666666865348816,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    },
+    {
+      "name": "30-run",
+      "duration": 0.625,
+      "startTime": 0,
+      "endTime": 0.625,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 4.1473458558321,
+      "recommendedSpeed": 6.6357533693313595
+    },
+    {
+      "name": "31-walk-backwards",
+      "duration": 1.1666666269302368,
+      "startTime": 0,
+      "endTime": 1.1666666269302368,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 1.5054538026452065,
+      "recommendedSpeed": 1.2903890176462793
+    },
+    {
+      "name": "32-walk-start",
+      "duration": 2.9166667461395264,
+      "startTime": 0,
+      "endTime": 2.9166667461395264,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 2.358088482171297,
+      "recommendedSpeed": 0.8084874575720526
+    },
+    {
+      "name": "33-walk-stop",
+      "duration": 3,
+      "startTime": 0,
+      "endTime": 3,
+      "channels": 41,
+      "samplers": 41,
+      "loop": false,
+      "cycleDistance": 1.2074312418699265,
+      "recommendedSpeed": 0.40247708062330884
+    },
+    {
+      "name": "34-walk-strafe-left",
+      "duration": 1,
+      "startTime": 0,
+      "endTime": 1,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 0.02824918832629919,
+      "recommendedSpeed": 0.02824918832629919
+    },
+    {
+      "name": "35-walk-strafe-right",
+      "duration": 1,
+      "startTime": 0,
+      "endTime": 1,
+      "channels": 49,
+      "samplers": 49,
+      "loop": true,
+      "cycleDistance": 0.016903627663850784,
+      "recommendedSpeed": 0.016903627663850784
+    },
+    {
+      "name": "36-walk",
+      "duration": 1,
+      "startTime": 0,
+      "endTime": 1,
+      "channels": 41,
+      "samplers": 41,
+      "loop": true,
+      "cycleDistance": 2.00300645083189,
+      "recommendedSpeed": 2.00300645083189
+    },
+    {
+      "name": "37-water-swimming",
+      "duration": 4.5,
+      "startTime": 0,
+      "endTime": 4.5,
+      "channels": 48,
+      "samplers": 48,
+      "loop": true,
+      "cycleDistance": 2.445333242416382,
+      "recommendedSpeed": 0.5434073872036405
+    },
+    {
+      "name": "38-water-treading",
+      "duration": 3,
+      "startTime": 0,
+      "endTime": 3,
+      "channels": 48,
+      "samplers": 48,
+      "loop": true,
+      "cycleDistance": null,
+      "recommendedSpeed": null
+    }
+  ]
+}

@@ -59,9 +59,12 @@
 
         // --- Configuration ---
         const MODEL_PATH = './merged/character_all_animations.glb';
-        const WALK_SPEED = 2.0;
-        const RUN_SPEED = 5.0;
+        const JSON_PATH = './merged/character_all_animations.json';
         const ROTATION_SPEED = 5.0;
+        const WALK_SPEED = 3.0;
+        const RUN_SPEED = 6.0;
+        
+        let animationData = null;
 
         // --- Scene Setup ---
         const scene = new THREE.Scene();
@@ -125,17 +128,25 @@
         let actions = {};
         let activeAction, previousAction;
         let isJumping = false;
+        const animationDurations = {};
+        const animationCycleDistances = {};
 
-        // Animation mapping - adjust these names based on your actual animation names!
-        // Based on previous logs: '36-walk', '30-run', '18-idle-berathing' (assuming idle exists or use first one)
-        // I'll try to find best matches dynamically or hardcode known ones
-        const animNames = {
-            idle: 'idle', // Will search for 'idle'
-            walk: 'walk',
-            run: 'run',
-            jump: 'jump'
-        };
-
+        fetch(JSON_PATH)
+            .then(response => response.json())
+            .then(data => {
+                animationData = data;
+                console.log('📖 Animation data loaded from JSON');
+                console.log(`  - Character height: ${data.character.height.toFixed(3)} units`);
+                console.log(`  - Walk cycle distance: ${data.animations.find(a => a.name === '36-walk')?.cycleDistance?.toFixed(3) || 'N/A'} units`);
+                console.log(`  - Run cycle distance: ${data.animations.find(a => a.name === '30-run')?.cycleDistance?.toFixed(3) || 'N/A'} units`);
+                loadModel();
+            })
+            .catch(err => {
+                console.warn('⚠️  Could not load animation JSON, using defaults:', err);
+                loadModel();
+            });
+        
+        function loadModel() {
         const loader = new GLTFLoader();
         loader.load(MODEL_PATH, (gltf) => {
             character = gltf.scene;
@@ -182,39 +193,137 @@
             const clips = gltf.animations;
             const findClip = (term) => clips.find(c => c.name.toLowerCase().includes(term));
 
-            const idleClip = findClip('idle') || clips[0];
+            // Helper to calculate cycle distance from Root/Hips/CharacterArmature position track
+            const getCycleDistance = (clip) => {
+                for (const track of clip.tracks) {
+                    const trackName = track.name.toLowerCase();
+                    // Look for position tracks on Root, Hips, or CharacterArmature
+                    // Track names in Three.js are like: "CharacterArmature.position" or "Root.translation"
+                    if ((trackName.includes('root') || trackName.includes('hips') || trackName.includes('armature')) && 
+                        (trackName.includes('translation') || trackName.includes('position'))) {
+                        if (track.times && track.values) {
+                            // Position tracks: 3 values per keyframe (x, y, z)
+                            // times.length = number of keyframes
+                            // values.length = times.length * 3
+                            const numKeyframes = track.times.length;
+                            if (numKeyframes >= 2 && track.values.length >= numKeyframes * 3) {
+                                // Get first and last Z values (forward direction)
+                                const firstZ = track.values[2]; // First keyframe: values[0]=x, values[1]=y, values[2]=z
+                                const lastZ = track.values[(numKeyframes - 1) * 3 + 2]; // Last keyframe Z
+                                const distance = Math.abs(lastZ - firstZ);
+                                if (distance > 0.01) {
+                                    console.log(`    📏 Found cycle distance for ${clip.name}: ${distance.toFixed(3)} units (from ${track.name})`);
+                                    return distance;
+                                }
+                            }
+                        }
+                    }
+                }
+                return null;
+            };
+            
+            const idleClip = findClip('18-idle-berathing') || findClip('idle-berathing') || findClip('idle') || clips[0];
             const walkClip = findClip('36-walk') || findClip('walk');
             const runClip = findClip('30-run') || findClip('run');
-            const jumpClip = findClip('jump');
+            // Try to find a better jump animation - avoid backward jumps
+            // Prefer simple jump, then long jump, avoid backward
+            const jumpClip = findClip('26-jump-simple') || 
+                           findClip('24-jump-long') || 
+                           findClip('jump-simple') || 
+                           clips.find(c => c.name.toLowerCase().includes('jump') && !c.name.toLowerCase().includes('backward'));
 
+            const shouldLoop = (clipName) => {
+                const name = clipName.toLowerCase();
+                return name.includes('idle') || name.includes('walk') || name.includes('run') || 
+                       name.includes('breathing') || name.includes('swimming') || name.includes('treading') ||
+                       name.includes('sneaking');
+            };
+            
             console.log(`\n🎯 ANIMATION MAPPING:`);
             if (idleClip) {
                 actions.idle = mixer.clipAction(idleClip);
-                console.log(`  ✅ Idle: "${idleClip.name}"`);
+                animationDurations.idle = idleClip.duration;
+                actions.idle.setLoop(THREE.LoopRepeat);
+                actions.idle.timeScale = 1.0;
+                console.log(`  ✅ Idle: "${idleClip.name}" (${idleClip.duration.toFixed(3)}s, loop: ${shouldLoop(idleClip.name)})`);
             } else {
                 console.log(`  ❌ Idle: NOT FOUND`);
             }
             
+            const removeRootMotionTracks = (clip) => {
+                const tracksToKeep = [];
+                for (const track of clip.tracks) {
+                    const trackName = track.name.toLowerCase();
+                    const isRootMotion = (trackName.includes('armature') || trackName.includes('root') || trackName.includes('hips')) && 
+                                        (trackName.includes('position') || trackName.includes('translation'));
+                    if (!isRootMotion) {
+                        tracksToKeep.push(track);
+                    }
+                }
+                if (tracksToKeep.length < clip.tracks.length) {
+                    const newClip = new THREE.AnimationClip(clip.name, clip.duration, tracksToKeep);
+                    console.log(`    🔧 Removed ${clip.tracks.length - tracksToKeep.length} root motion tracks from ${clip.name}`);
+                    return newClip;
+                }
+                return clip;
+            };
+            
             if (walkClip) {
-                actions.walk = mixer.clipAction(walkClip);
-                console.log(`  ✅ Walk: "${walkClip.name}"`);
+                const walkClipNoRootMotion = removeRootMotionTracks(walkClip);
+                actions.walk = mixer.clipAction(walkClipNoRootMotion);
+                animationDurations.walk = walkClipNoRootMotion.duration;
+                const walkData = animationData?.animations.find(a => a.name === walkClip.name);
+                if (walkData && walkData.cycleDistance !== null) {
+                    animationCycleDistances.walk = walkData.cycleDistance;
+                    console.log(`  ✅ Walk: "${walkClip.name}" (${walkClipNoRootMotion.duration.toFixed(3)}s, loop: ${shouldLoop(walkClip.name)}, cycle: ${walkData.cycleDistance.toFixed(3)} units from JSON, speed: ${walkData.recommendedSpeed?.toFixed(3) || 'N/A'} units/s from JSON)`);
+                } else {
+                    console.warn(`  ⚠️  Walk: No cycle distance in JSON, calculating from tracks...`);
+                    animationCycleDistances.walk = getCycleDistance(walkClip);
+                    const speed = animationCycleDistances.walk ? animationCycleDistances.walk / walkClipNoRootMotion.duration : null;
+                    console.log(`  ✅ Walk: "${walkClip.name}" (${walkClipNoRootMotion.duration.toFixed(3)}s, loop: ${shouldLoop(walkClip.name)}, cycle: ${animationCycleDistances.walk?.toFixed(3) || 'N/A'} units (calculated), speed: ${speed?.toFixed(3) || 'N/A'} units/s)`);
+                }
+                actions.walk.setLoop(THREE.LoopRepeat);
+                actions.walk.timeScale = 1.0;
             } else {
                 console.log(`  ❌ Walk: NOT FOUND`);
             }
             
             if (runClip) {
-                actions.run = mixer.clipAction(runClip);
-                console.log(`  ✅ Run: "${runClip.name}"`);
+                const runClipNoRootMotion = removeRootMotionTracks(runClip);
+                actions.run = mixer.clipAction(runClipNoRootMotion);
+                animationDurations.run = runClipNoRootMotion.duration;
+                const runData = animationData?.animations.find(a => a.name === runClip.name);
+                if (runData && runData.cycleDistance !== null) {
+                    animationCycleDistances.run = runData.cycleDistance;
+                    console.log(`  ✅ Run: "${runClip.name}" (${runClipNoRootMotion.duration.toFixed(3)}s, loop: ${shouldLoop(runClip.name)}, cycle: ${runData.cycleDistance.toFixed(3)} units from JSON, speed: ${runData.recommendedSpeed?.toFixed(3) || 'N/A'} units/s from JSON)`);
+                } else {
+                    console.warn(`  ⚠️  Run: No cycle distance in JSON, calculating from tracks...`);
+                    animationCycleDistances.run = getCycleDistance(runClip);
+                    const speed = animationCycleDistances.run ? animationCycleDistances.run / runClipNoRootMotion.duration : null;
+                    console.log(`  ✅ Run: "${runClip.name}" (${runClipNoRootMotion.duration.toFixed(3)}s, loop: ${shouldLoop(runClip.name)}, cycle: ${animationCycleDistances.run?.toFixed(3) || 'N/A'} units (calculated), speed: ${speed?.toFixed(3) || 'N/A'} units/s)`);
+                }
+                actions.run.setLoop(THREE.LoopRepeat);
+                actions.run.timeScale = 1.0;
             } else {
                 console.log(`  ❌ Run: NOT FOUND`);
             }
             
             if (jumpClip) {
                 actions.jump = mixer.clipAction(jumpClip);
-                console.log(`  ✅ Jump: "${jumpClip.name}"`);
+                animationDurations.jump = jumpClip.duration;
+                actions.jump.setLoop(THREE.LoopOnce);
+                actions.jump.clampWhenFinished = true;
+                actions.jump.timeScale = 1.0;
+                console.log(`  ✅ Jump: "${jumpClip.name}" (${jumpClip.duration.toFixed(3)}s, loop: false)`);
             } else {
                 console.log(`  ⚠️  Jump: NOT FOUND (optional)`);
             }
+            
+            console.log(`\n⏱️  Animation Durations (dynamic):`);
+            Object.keys(animationDurations).forEach(key => {
+                const loop = key === 'jump' ? 'No' : 'Yes';
+                console.log(`  - ${key}: ${animationDurations[key].toFixed(3)}s (loop: ${loop})`);
+            });
 
             console.log(`\n🎮 CONTROLS:`);
             console.log(`  W/A/S/D - Move`);
@@ -237,20 +346,24 @@
             console.error(e);
             document.getElementById('info').innerText = 'Error loading model: ' + e.message;
         });
+        }
 
         let lastActionName = '';
         let lastInputState = '';
         
-        function fadeToAction(name, duration) {
+        function fadeToAction(name, fadeDuration = 0.2) {
             previousAction = activeAction;
             activeAction = actions[name];
 
             if (previousAction !== activeAction && activeAction) {
-                previousAction.fadeOut(duration);
-                activeAction.reset().fadeIn(duration).play();
+                previousAction.fadeOut(fadeDuration);
+                activeAction.reset().fadeIn(fadeDuration).play();
                 
                 if (lastActionName !== name) {
-                    console.log(`🎬 Animation: ${previousAction?.getClip().name || 'none'} → ${activeAction.getClip().name}`);
+                    const clip = activeAction.getClip();
+                    const duration = animationDurations[name] || clip.duration;
+                    const loop = name === 'jump' ? 'once' : 'repeat';
+                    console.log(`🎬 Animation: ${previousAction?.getClip().name || 'none'} → ${clip.name} (${duration.toFixed(3)}s, ${loop})`);
                     lastActionName = name;
                 }
             }
@@ -261,16 +374,14 @@
         function updateCharacter(delta) {
             if (!character) return;
 
-            const moveSpeed = keys.shift ? RUN_SPEED : WALK_SPEED;
             const direction = new THREE.Vector3();
-
             let moving = false;
             const activeKeys = [];
 
             if (keys.w) { direction.z += 1; moving = true; activeKeys.push('W'); }
             if (keys.s) { direction.z -= 1; moving = true; activeKeys.push('S'); }
-            if (keys.a) { character.rotation.y += ROTATION_SPEED * delta; activeKeys.push('A'); }
-            if (keys.d) { character.rotation.y -= ROTATION_SPEED * delta; activeKeys.push('D'); }
+            if (keys.a && !isJumping) { character.rotation.y += ROTATION_SPEED * delta; activeKeys.push('A'); }
+            if (keys.d && !isJumping) { character.rotation.y -= ROTATION_SPEED * delta; activeKeys.push('D'); }
             if (keys.shift) activeKeys.push('SHIFT');
             if (keys.space) activeKeys.push('SPACE');
 
@@ -284,25 +395,43 @@
             }
 
             if (keys.space && actions.jump && !isJumping) {
-                fadeToAction('jump', 0.2);
+                fadeToAction('jump', 0.1);
                 isJumping = true;
-                setTimeout(() => { isJumping = false; }, 1000);
-            } else if (moving) {
+                const wasMoving = moving;
+                const wasRunning = keys.shift;
+                const jumpDuration = animationDurations.jump ? animationDurations.jump * 1000 : 1000;
+                setTimeout(() => { 
+                    isJumping = false;
+                    if (wasMoving) {
+                        if (wasRunning && actions.run) {
+                            fadeToAction('run', 0.2);
+                        } else if (actions.walk) {
+                            fadeToAction('walk', 0.2);
+                        }
+                    } else {
+                        if (actions.idle) fadeToAction('idle', 0.2);
+                    }
+                }, jumpDuration);
+            }
+            
+            if (moving && !isJumping) {
                 if (keys.shift && actions.run) {
                     fadeToAction('run', 0.2);
                 } else if (actions.walk) {
                     fadeToAction('walk', 0.2);
                 }
-            } else {
-                if (actions.idle) fadeToAction('idle', 0.2);
+            } else if (!isJumping) {
+                if (actions.idle) {
+                    fadeToAction('idle', 0.2);
+                }
             }
 
-            if (moving) {
+            if (moving && !isJumping) {
+                const moveSpeed = keys.shift ? RUN_SPEED : WALK_SPEED;
                 const forward = new THREE.Vector3(0, 0, 1);
-                forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y);
-                if (keys.s) forward.negate();
-
-                character.position.add(forward.multiplyScalar(moveSpeed * delta));
+                forward.applyQuaternion(character.quaternion);
+                forward.multiplyScalar(moveSpeed * delta);
+                character.position.add(forward);
             }
         }
 
@@ -319,6 +448,7 @@
             updateCharacter(delta);
 
             if (character) {
+                character.updateMatrixWorld();
                 const relativeOffset = new THREE.Vector3(0, 2, -3);
                 const cameraOffset = relativeOffset.applyMatrix4(character.matrixWorld);
                 camera.position.lerp(cameraOffset, 0.1);

@@ -213,8 +213,47 @@ async function mergeAnimations() {
     md += `- **Total Nodes:** ${root.listNodes().length}\n\n`;
     
     md += `## Animation List\n\n`;
-    md += `| Name | Duration (s) | Start (s) | End (s) | Channels | Samplers | Loop |\n`;
-    md += `|------|-------------|-----------|---------|----------|----------|------|\n`;
+    md += `| Name | Duration (s) | Start (s) | End (s) | Channels | Samplers | Loop | Cycle Distance (units) |\n`;
+    md += `|------|-------------|-----------|---------|----------|----------|------|----------------------|\n`;
+    
+    const calculateCycleDistance = (anim, root) => {
+        const rootOrHipsNode = root.listNodes().find(node => {
+            const nodeName = node.getName();
+            return nodeName === 'CharacterArmature' || nodeName.toLowerCase().includes('armature');
+        }) || root.listNodes().find(node => {
+            const nodeName = node.getName().toLowerCase();
+            return (nodeName.includes('root') && !nodeName.includes('finger'));
+        }) || root.listNodes().find(node => {
+            const nodeName = node.getName().toLowerCase();
+            return nodeName.includes('hips');
+        });
+        
+        if (!rootOrHipsNode) return null;
+
+        for (const channel of anim.listChannels()) {
+            const targetNode = channel.getTargetNode();
+            const targetPath = channel.getTargetPath();
+            if (targetNode === rootOrHipsNode && targetPath === 'translation') {
+                const sampler = channel.getSampler();
+                if (sampler) {
+                    const input = sampler.getInput();
+                    const output = sampler.getOutput();
+                    if (input && output) {
+                        const times = input.getArray();
+                        const values = output.getArray();
+                        if (times && values && times.length >= 2 && values.length >= 6) {
+                            const numKeyframes = times.length;
+                            const firstZ = values[2];
+                            const lastZ = values[(numKeyframes - 1) * 3 + 2];
+                            const distance = Math.abs(lastZ - firstZ);
+                            if (distance > 0.01) return distance;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    };
     
     const animDetails = [];
     finalAnims.forEach(anim => {
@@ -249,7 +288,11 @@ async function mergeAnimations() {
             name.includes('sneaking')
         ) && !name.includes('start') && !name.includes('stop');
         
-        md += `| ${name} | ${duration.toFixed(3)} | ${minTime.toFixed(3)} | ${maxTime.toFixed(3)} | ${channels.length} | ${samplers.length} | ${isLoop ? 'Yes' : 'No'} |\n`;
+        const cycleDistance = calculateCycleDistance(anim, root);
+        const recommendedSpeed = cycleDistance !== null && duration > 0 ? (cycleDistance / duration) : null;
+        
+        const cycleDistStr = cycleDistance !== null ? cycleDistance.toFixed(3) : 'N/A';
+        md += `| ${name} | ${duration.toFixed(3)} | ${minTime.toFixed(3)} | ${maxTime.toFixed(3)} | ${channels.length} | ${samplers.length} | ${isLoop ? 'Yes' : 'No'} | ${cycleDistStr} |\n`;
         
         animDetails.push({
             name,
@@ -258,7 +301,9 @@ async function mergeAnimations() {
             endTime: maxTime,
             channels: channels.length,
             samplers: samplers.length,
-            isLoop
+            isLoop,
+            cycleDistance: cycleDistance !== null ? cycleDistance : null,
+            recommendedSpeed: recommendedSpeed !== null ? recommendedSpeed : null
         });
     });
     
@@ -271,7 +316,12 @@ async function mergeAnimations() {
         md += `- **End Time:** ${anim.endTime.toFixed(3)}s\n`;
         md += `- **Channels:** ${anim.channels}\n`;
         md += `- **Samplers:** ${anim.samplers}\n`;
-        md += `- **Loop Recommended:** ${anim.isLoop ? 'Yes' : 'No'}\n\n`;
+        md += `- **Loop Recommended:** ${anim.isLoop ? 'Yes' : 'No'}\n`;
+        if (anim.cycleDistance !== null) {
+            md += `- **Cycle Distance:** ${anim.cycleDistance.toFixed(3)} units\n`;
+            md += `- **Recommended Speed:** ${anim.recommendedSpeed.toFixed(3)} units/s (for timeScale = 1.0)\n`;
+        }
+        md += `\n`;
     });
     
     md += `## Usage Notes\n\n`;
@@ -296,6 +346,41 @@ async function mergeAnimations() {
     
     fs.writeFileSync(docPath, md, 'utf8');
     console.log(`✅ Dokumentation erstellt: ${docPath}`);
+    
+    const jsonPath = path.resolve(__dirname, '../merged/character_all_animations.json');
+    const jsonData = {
+        character: {
+            height: characterHeight,
+            width: characterWidth,
+            depth: characterDepth,
+            boundingBox: {
+                width: maxX - minX,
+                height: maxY - minY,
+                depth: maxZ - minZ
+            },
+            center: {
+                x: (minX + maxX) / 2,
+                y: (minY + maxY) / 2,
+                z: (minZ + maxZ) / 2
+            },
+            totalMeshes: meshes.length,
+            totalNodes: root.listNodes().length
+        },
+        animations: animDetails.map(anim => ({
+            name: anim.name,
+            duration: anim.duration,
+            startTime: anim.startTime,
+            endTime: anim.endTime,
+            channels: anim.channels,
+            samplers: anim.samplers,
+            loop: anim.isLoop,
+            cycleDistance: anim.cycleDistance,
+            recommendedSpeed: anim.recommendedSpeed
+        }))
+    };
+    
+    fs.writeFileSync(jsonPath, JSON.stringify(jsonData, null, 2), 'utf8');
+    console.log(`✅ JSON-Daten erstellt: ${jsonPath}`);
 }
 
 mergeAnimations().catch(err => {
